@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OIT Certificate Bulk Printer</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./assets/xlsx.full.min.js" defer></script>
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <header class="hero no-print">
+    <div><p class="eyebrow">OIT certificate operations</p><h1>Bulk certificate printer</h1><p>Match PASS results with submitted name corrections, review the final names, then print one A4 certificate per person.</p></div>
+    <div class="privacy"><strong>Private by design</strong><span>Your spreadsheets stay in this browser. Nothing is uploaded.</span></div>
+  </header>
+
+  <main>
+    <section class="panel import-panel no-print" aria-labelledby="import-title">
+      <div class="section-heading"><div><p class="step">Step 1</p><h2 id="import-title">Import and match</h2></div><button id="processButton" class="primary">Match PASS names</button></div>
+      <div class="upload-grid">
+        <label class="upload"><span class="upload-number">1</span><strong>Results workbook</strong><span>Choose the Excel file containing Certificate PASS / FAIL results.</span><input id="resultsFile" type="file" accept=".xlsx,.xls,.csv"></label>
+        <label class="upload"><span class="upload-number">2</span><strong>Name corrections</strong><span>Choose the CSV or Excel response file with official-name updates.</span><input id="correctionsFile" type="file" accept=".csv,.xlsx,.xls"></label>
+      </div>
+      <div class="file-status"><p id="resultsStatus">No results file selected.</p><p id="correctionsStatus">No corrections file selected.</p></div>
+      <p id="importMessage" class="message" aria-live="polite">Files are processed only when you click “Match PASS names”.</p>
+      <div id="summary" class="summary"></div>
+      <div id="issues" class="issues"></div>
+    </section>
+
+    <section class="panel no-print" aria-labelledby="names-title">
+      <div class="section-heading"><div><p class="step">Step 2</p><h2 id="names-title">Review names only</h2></div><div class="actions"><button id="downloadCsvButton" disabled>Download CSV</button><button id="downloadXlsxButton" disabled>Download Excel</button></div></div>
+      <div class="review-grid">
+        <div><label for="names">One name per line</label><textarea id="names" rows="11" spellcheck="false" placeholder="Student Name"></textarea><p class="hint">You can make a final spelling change here before printing.</p></div>
+        <div class="table-wrap"><table id="namesTable"><thead><tr><th>#</th><th>Print name</th><th>Source</th></tr></thead><tbody><tr><td colspan="3">Import the two files to build the list.</td></tr></tbody></table></div>
+      </div>
+    </section>
+
+    <section class="panel print-controls no-print" aria-labelledby="print-title">
+      <div class="section-heading"><div><p class="step">Step 3</p><h2 id="print-title">Print A4 certificates</h2></div><strong id="pageCount">0 pages</strong></div>
+      <div class="control-row">
+        <label>Print mode<select id="printMode"><option value="overlay">Names only — pre-printed certificates</option><option value="complete">Complete certificate design</option></select></label>
+        <label>Move left/right (mm)<input id="offsetX" type="number" value="0" step="0.5"></label>
+        <label>Move up/down (mm)<input id="offsetY" type="number" value="0" step="0.5"></label>
+        <button id="resetButton">Reset position</button><button id="printButton" class="primary">Print certificates</button>
+      </div>
+      <p class="hint">HP LaserJet: select A4, portrait, actual size / 100%, one-sided, and turn off headers and footers. Test one sheet before the full run.</p>
+    </section>
+
+    <section id="pages" class="pages" aria-label="Certificate print preview"></section>
+  </main>
+
+  <template id="pageTemplate">
+    <article class="certificate-page">
+      <span class="mode-chip">NAME OVERLAY</span>
+      <img class="certificate-art" src="./assets/certificate-template.jpg" alt="">
+      <svg class="name-layer" viewBox="0 0 595.2756 841.8898" aria-hidden="true"><g class="name-group"></g></svg>
+    </article>
+  </template>
+</body>
+</html>
