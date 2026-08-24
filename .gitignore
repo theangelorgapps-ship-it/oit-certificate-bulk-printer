@@ -1,5 +1,6 @@
 node_modules/
 test-artifacts/
+.cloudflare-site/
 .DS_Store
 *.csv
 *.xlsx

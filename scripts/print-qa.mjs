@@ -33,7 +33,7 @@ try {
     assert.equal(await page.locator("#names").inputValue().then((value) => value.trim().split(/\r?\n/).length), 48);
   }
 
-  await page.locator("details.advanced").evaluate((element) => { element.open = true; });
+  await page.locator("details.source-card").evaluate((element) => { element.open = true; });
   await page.setInputFiles("#resultsFile", process.env.OIT_RESULTS_FILE || path.join(os.homedir(), "Downloads", "OIT RESUlTS.xlsx"));
   await page.setInputFiles("#correctionsFile", process.env.OIT_CORRECTIONS_FILE || path.join(os.homedir(), "Downloads", "GraduationCertificateForm_Report.csv"));
   await page.click("#processButton");
