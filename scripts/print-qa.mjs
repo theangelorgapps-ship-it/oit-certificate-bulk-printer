@@ -24,6 +24,18 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "networkidle" });
+  assert.equal(await page.locator(".certificate-page").count(), 0, "The empty workspace should not create print pages.");
+  assert.equal(await page.locator("#pageCount").textContent(), "0 pages");
+  assert.equal(await page.locator("#printButton").isDisabled(), true);
+
+  await page.setInputFiles("#namesFile", {
+    name: "invalid-contacts.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("Email Address,Phone\nperson@example.test,12345\n"),
+  });
+  await page.waitForFunction(() => document.querySelector("#namesFileStatus")?.dataset.tone === "danger");
+  assert.match(await page.locator("#importMessage").textContent(), /name column/i);
+
   const outputDir = process.env.OIT_OUTPUT_DIR || path.resolve(root, "../outputs/oit-certificate-bulk-2026-08-24");
   for (const filename of ["OIT_Certificate_PASS_Names.csv", "OIT_Certificate_PASS_Names.xlsx"]) {
     await page.setInputFiles("#namesFile", path.join(outputDir, filename));
@@ -33,7 +45,14 @@ try {
     assert.equal(await page.locator("#names").inputValue().then((value) => value.trim().split(/\r?\n/).length), 48);
   }
 
-  await page.locator("details.advanced").evaluate((element) => { element.open = true; });
+  const csvDownloadPromise = page.waitForEvent("download");
+  await page.click("#downloadCsvButton");
+  assert.equal((await csvDownloadPromise).suggestedFilename(), "OIT_Certificate_PASS_Names.csv");
+  const xlsxDownloadPromise = page.waitForEvent("download");
+  await page.click("#downloadXlsxButton");
+  assert.equal((await xlsxDownloadPromise).suggestedFilename(), "OIT_Certificate_PASS_Names.xlsx");
+
+  await page.locator("details.source-card").evaluate((element) => { element.open = true; });
   await page.setInputFiles("#resultsFile", process.env.OIT_RESULTS_FILE || path.join(os.homedir(), "Downloads", "OIT RESUlTS.xlsx"));
   await page.setInputFiles("#correctionsFile", process.env.OIT_CORRECTIONS_FILE || path.join(os.homedir(), "Downloads", "GraduationCertificateForm_Report.csv"));
   await page.click("#processButton");
@@ -42,6 +61,21 @@ try {
   assert.equal(count, 48, "Two-file reconciliation should still create 48 PASS pages.");
 
   await page.locator("#names").fill("Ada Lovelace\nJean-Pierre O'Connor\nAlexandria Catherine Montgomery-Worthington");
+  await page.locator("#offsetX").fill("4.5");
+  await page.locator("#offsetY").fill("-2.5");
+  assert.notEqual(await page.locator(".name-group").first().getAttribute("transform"), "translate(0 0)");
+  await page.click("#resetButton");
+  assert.equal(await page.locator("#offsetX").inputValue(), "0");
+  assert.equal(await page.locator("#offsetY").inputValue(), "0");
+  assert.equal(await page.locator(".name-group").first().getAttribute("transform"), "translate(0 0)");
+
+  await page.evaluate(() => {
+    window.__printCalls = 0;
+    window.print = () => { window.__printCalls += 1; };
+  });
+  await page.click("#printButton");
+  assert.equal(await page.evaluate(() => window.__printCalls), 1);
+
   await page.locator("#printMode").selectOption("complete");
   const fullPdf = path.join(artifacts, "complete-design-a4.pdf");
   await page.pdf({ path: fullPdf, format: "A4", printBackground: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
