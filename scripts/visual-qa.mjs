@@ -24,6 +24,8 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 async function checkViewport(viewport, filename) {
   const page = await browser.newPage({ viewport });
   await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "networkidle" });
+  await page.keyboard.press("Tab");
+  assert.equal(await page.evaluate(() => document.activeElement?.matches("a, button, input, select, textarea, summary")), true, `Keyboard focus should reach an interactive control at ${viewport.width}px.`);
   await page.setInputFiles("#namesFile", namesFile);
   await page.waitForFunction(() => document.querySelector("#namesFileStatus")?.dataset.tone === "success");
   for (const selector of [".topbar", ".import-card", ".metric-card", ".names-card", ".print-card", ".rail"]) {
@@ -45,9 +47,18 @@ async function checkViewport(viewport, filename) {
   await page.close();
 }
 
+async function checkAccessibilityPreferences() {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "networkidle" });
+  assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior), "auto");
+  assert.equal(await page.locator(".nav-key > span").first().evaluate((element) => getComputedStyle(element).transitionDuration), "0s");
+  await page.close();
+}
+
 try {
   await checkViewport({ width: 1440, height: 1100 }, "redesign-desktop.png");
   await checkViewport({ width: 390, height: 844 }, "redesign-mobile.png");
+  await checkAccessibilityPreferences();
   console.log("DESKTOP_LAYOUT=1440x1100 PASS");
   console.log("MOBILE_LAYOUT=390x844 PASS");
   console.log("VISUAL_QA: PASS");

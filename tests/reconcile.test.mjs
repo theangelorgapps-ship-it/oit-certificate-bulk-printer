@@ -6,15 +6,15 @@ const resultsMatrix = [
   ["First Name", "Last Name", "PASS / FAIL", "Email"],
   ["Alice", "Example", "PASS", "alice@example.test"],
   ["Bob", "Failure", "FAIL", "bob@example.test"],
-  ["CHARLENE", "BOWEN", "PASS", "old@example.test"],
-  ["Sushma", "Rayala", "PASS", ""],
+  ["CASEY", "SAMPLE", "PASS", "old@example.test"],
+  ["Jordan", "Fixture", "PASS", ""],
 ];
 const correctionMatrix = [
   ["Please enter your full name as it appears on your official documents", "Email Address"],
   ["Alice, M. Example", "alice@example.test"],
   ["Bob Corrected", "bob@example.test"],
-  ["Charlene Bowen", "new@example.test"],
-  ["SUSHMA RAYALA", "missing@example.test"],
+  ["Casey Sample", "new@example.test"],
+  ["JORDAN FIXTURE", "missing@example.test"],
   ["Nobody Here", "nobody@example.test"],
 ];
 
@@ -26,14 +26,14 @@ test("keeps every PASS and excludes FAIL", () => {
 
 test("matches corrections by email, then exact normalized name", () => {
   const report = reconcileCertificateNames(parseResultsMatrix(resultsMatrix), parseCorrectionsMatrix(correctionMatrix));
-  assert.deepEqual(report.names.map((row) => row.printName), ["Alice M. Example", "Charlene Bowen", "Sushma Rayala"]);
+  assert.deepEqual(report.names.map((row) => row.printName), ["Alice M. Example", "Casey Sample", "Jordan Fixture"]);
   assert.equal(report.stats.matchedPassCorrections, 3);
   assert.equal(report.stats.matchedNonPassCorrections, 1);
   assert.equal(report.stats.unmatchedCorrections, 1);
 });
 
 test("cleans commas and uniform casing without reversing names", () => {
-  assert.equal(cleanDisplayName("EDSON, VEREMU"), "Edson Veremu");
+  assert.equal(cleanDisplayName("TEST, PERSON"), "Test Person");
   assert.equal(cleanDisplayName("Anne-Marie O'NEIL"), "Anne-Marie O'NEIL");
 });
 
