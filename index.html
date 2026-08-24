@@ -10,25 +10,32 @@
 </head>
 <body>
   <header class="hero no-print">
-    <div><p class="eyebrow">OIT certificate operations</p><h1>Bulk certificate printer</h1><p>Match PASS results with submitted name corrections, review the final names, then print one A4 certificate per person.</p></div>
+    <div><p class="eyebrow">OIT certificate operations</p><h1>Bulk certificate printer</h1><p>Upload a names-only CSV or Excel file, review the names, then print one A4 certificate per person.</p></div>
     <div class="privacy"><strong>Private by design</strong><span>Your spreadsheets stay in this browser. Nothing is uploaded.</span></div>
   </header>
 
   <main>
-    <section class="panel import-panel no-print" aria-labelledby="import-title">
-      <div class="section-heading"><div><p class="step">Step 1</p><h2 id="import-title">Import and match</h2></div><button id="processButton" class="primary">Match PASS names</button></div>
+    <section class="panel import-panel no-print" aria-labelledby="names-file-title">
+      <div class="section-heading"><div><p class="step">Step 1</p><h2 id="names-file-title">Import the names to print</h2><p>Choose the names-only CSV or Excel file. The printer creates one A4 certificate per valid name.</p></div></div>
+      <label class="upload direct-upload"><span class="upload-number">1</span><strong>Names-only CSV or Excel</strong><span>Use a column headed Student Name, Full Name, Certificate Name, Print Name, or Name. A headerless first column also works.</span><input id="namesFile" type="file" accept=".csv,.xlsx,.xls"></label>
+      <div class="file-status single"><p id="namesFileStatus">No names file selected.</p></div>
+      <p id="importMessage" class="message" aria-live="polite">Your file stays in this browser and is never uploaded.</p>
+      <div id="summary" class="summary"></div>
+      <div id="issues" class="issues"></div>
+    </section>
+
+    <details class="panel advanced no-print">
+      <summary>Optional: build the PASS names from results and correction files</summary>
+      <div class="section-heading"><div><p class="step">Source matching</p><h2 id="import-title">Match the two original files</h2></div><button id="processButton" class="primary">Match PASS names</button></div>
       <div class="upload-grid">
         <label class="upload"><span class="upload-number">1</span><strong>Results workbook</strong><span>Choose the Excel file containing Certificate PASS / FAIL results.</span><input id="resultsFile" type="file" accept=".xlsx,.xls,.csv"></label>
         <label class="upload"><span class="upload-number">2</span><strong>Name corrections</strong><span>Choose the CSV or Excel response file with official-name updates.</span><input id="correctionsFile" type="file" accept=".csv,.xlsx,.xls"></label>
       </div>
       <div class="file-status"><p id="resultsStatus">No results file selected.</p><p id="correctionsStatus">No corrections file selected.</p></div>
-      <p id="importMessage" class="message" aria-live="polite">Files are processed only when you click “Match PASS names”.</p>
-      <div id="summary" class="summary"></div>
-      <div id="issues" class="issues"></div>
-    </section>
+    </details>
 
     <section class="panel no-print" aria-labelledby="names-title">
-      <div class="section-heading"><div><p class="step">Step 2</p><h2 id="names-title">Review names only</h2></div><div class="actions"><button id="downloadCsvButton" disabled>Download CSV</button><button id="downloadXlsxButton" disabled>Download Excel</button></div></div>
+      <div class="section-heading"><div><p class="step">Step 2</p><h2 id="names-title">Review the certificate names</h2></div><div class="actions"><button id="downloadCsvButton" disabled>Download CSV</button><button id="downloadXlsxButton" disabled>Download Excel</button></div></div>
       <div class="review-grid">
         <div><label for="names">One name per line</label><textarea id="names" rows="11" spellcheck="false" placeholder="Student Name"></textarea><p class="hint">You can make a final spelling change here before printing.</p></div>
         <div class="table-wrap"><table id="namesTable"><thead><tr><th>#</th><th>Print name</th><th>Source</th></tr></thead><tbody><tr><td colspan="3">Import the two files to build the list.</td></tr></tbody></table></div>

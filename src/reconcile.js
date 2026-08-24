@@ -48,6 +48,62 @@ export function cleanDisplayName(value) {
   return cleaned.split(" ").map(titleCaseWord).join(" ");
 }
 
+function looksLikeName(value) {
+  const candidate = cleanDisplayName(value);
+  if (!candidate || candidate.includes("@") || /\d/.test(candidate)) return false;
+  const words = candidate.split(" ").filter(Boolean);
+  return words.length >= 1 && words.length <= 10 && /\p{L}/u.test(candidate);
+}
+
+function isNameHeader(value) {
+  const header = normalizeHeader(value);
+  return ["name", "full name", "student name", "certificate name", "print name", "student full name"].includes(header)
+    || (header.includes("name") && (header.includes("student") || header.includes("certificate") || header.includes("official")));
+}
+
+export function parseNamesMatrix(matrix, { sheetName = "Names Only" } = {}) {
+  if (!Array.isArray(matrix) || matrix.length === 0) throw new Error("The names file is empty.");
+  const scanLimit = Math.min(matrix.length, 10);
+  let headerRowIndex = -1;
+  let nameColumnIndex = -1;
+  for (let rowIndex = 0; rowIndex < scanLimit; rowIndex += 1) {
+    const row = matrix[rowIndex] || [];
+    const columnIndex = row.findIndex(isNameHeader);
+    if (columnIndex >= 0) {
+      headerRowIndex = rowIndex;
+      nameColumnIndex = columnIndex;
+      break;
+    }
+  }
+
+  if (nameColumnIndex < 0) {
+    const firstDataRowIndex = matrix.findIndex((row) => !isBlankRow(row));
+    if (firstDataRowIndex < 0) throw new Error("The names file contains no names.");
+    const firstRow = matrix[firstDataRowIndex] || [];
+    const commonHeaders = firstRow.map(normalizeHeader);
+    if (commonHeaders.some((header) => /email|address|phone|score|result|status/.test(header))) {
+      throw new Error("Could not find a name column. Use a header such as Student Name or Full Name.");
+    }
+    nameColumnIndex = firstRow.findIndex(looksLikeName);
+    if (nameColumnIndex < 0) throw new Error("Could not find a valid name column in this file.");
+    headerRowIndex = firstDataRowIndex - 1;
+  }
+
+  const names = [];
+  const skippedRows = [];
+  for (let rowIndex = headerRowIndex + 1; rowIndex < matrix.length; rowIndex += 1) {
+    const raw = matrix[rowIndex]?.[nameColumnIndex];
+    if (text(raw) === "") continue;
+    if (!looksLikeName(raw)) {
+      skippedRows.push(rowIndex + 1);
+      continue;
+    }
+    names.push(cleanDisplayName(raw));
+  }
+  if (names.length === 0) throw new Error("No valid certificate names were found in the selected column.");
+  return { sheetName, headerRowNumber: headerRowIndex >= 0 ? headerRowIndex + 1 : 0, nameColumnNumber: nameColumnIndex + 1, names, skippedRows };
+}
+
 function includesEvery(header, terms) {
   return terms.every((term) => header.includes(term));
 }
@@ -294,4 +350,19 @@ export function workbookFirstMatrix(workbook) {
     sheetName,
     matrix: globalThis.XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: null, raw: false }),
   };
+}
+
+export function findNamesSheet(workbook) {
+  if (!workbook?.SheetNames?.length) throw new Error("The file contains no worksheets.");
+  const preferred = workbook.SheetNames.find((name) => /names?\s*only|certificate\s*names?/i.test(name));
+  const ordered = preferred ? [preferred, ...workbook.SheetNames.filter((name) => name !== preferred)] : workbook.SheetNames;
+  for (const sheetName of ordered) {
+    const matrix = globalThis.XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: null, raw: false });
+    try {
+      return { sheetName, matrix, parsed: parseNamesMatrix(matrix, { sheetName }) };
+    } catch {
+      // Try the next worksheet.
+    }
+  }
+  throw new Error("No worksheet contains a usable certificate-name column.");
 }

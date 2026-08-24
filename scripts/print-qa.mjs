@@ -24,15 +24,22 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(`http://127.0.0.1:${port}`, { waitUntil: "networkidle" });
+  const outputDir = process.env.OIT_OUTPUT_DIR || path.resolve(root, "../outputs/oit-certificate-bulk-2026-08-24");
+  for (const filename of ["OIT_Certificate_PASS_Names.csv", "OIT_Certificate_PASS_Names.xlsx"]) {
+    await page.setInputFiles("#namesFile", path.join(outputDir, filename));
+    await page.waitForFunction(() => document.querySelector("#namesFileStatus")?.dataset.tone === "success");
+    const importedCount = await page.locator(".certificate-page").count();
+    assert.equal(importedCount, 48, `${filename} should create 48 certificate pages.`);
+    assert.equal(await page.locator("#names").inputValue().then((value) => value.trim().split(/\r?\n/).length), 48);
+  }
+
+  await page.locator("details.advanced").evaluate((element) => { element.open = true; });
   await page.setInputFiles("#resultsFile", process.env.OIT_RESULTS_FILE || path.join(os.homedir(), "Downloads", "OIT RESUlTS.xlsx"));
   await page.setInputFiles("#correctionsFile", process.env.OIT_CORRECTIONS_FILE || path.join(os.homedir(), "Downloads", "GraduationCertificateForm_Report.csv"));
   await page.click("#processButton");
-  await page.waitForFunction(() => document.querySelector("#importMessage")?.dataset.tone === "success");
+  await page.waitForFunction(() => document.querySelector("#importMessage")?.textContent?.includes("48 PASS names"));
   const count = await page.locator(".certificate-page").count();
-  assert(count > 0, "No certificate pages were rendered.");
-  assert.equal(await page.locator("#names").inputValue().then((value) => value.trim().split(/\r?\n/).length), count);
-  const pageText = await page.locator("body").innerText();
-  assert(pageText.includes("48 PASS names are ready for bulk printing."));
+  assert.equal(count, 48, "Two-file reconciliation should still create 48 PASS pages.");
 
   await page.locator("#names").fill("Ada Lovelace\nJean-Pierre O'Connor\nAlexandria Catherine Montgomery-Worthington");
   await page.locator("#printMode").selectOption("complete");
@@ -46,6 +53,8 @@ try {
   assert.match(info, /Page size:\s+59\d\.\d+ x 84\d\.\d+ pts \(A4\)/);
   await page.screenshot({ path: path.join(artifacts, "browser-preview.png"), fullPage: true });
   console.log(`PRINT_PAGES=${count}`);
+  console.log("NAMES_FILE_CSV_PAGES=48");
+  console.log("NAMES_FILE_XLSX_PAGES=48");
   console.log("PRINT_QA: PASS");
 } finally {
   await browser.close();

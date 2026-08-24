@@ -1,5 +1,6 @@
 import {
   cleanDisplayName,
+  findNamesSheet,
   findResultsSheet,
   parseCorrectionsMatrix,
   parseResultsMatrix,
@@ -22,6 +23,8 @@ const state = {
 
 const elements = {
   resultsFile: document.getElementById("resultsFile"),
+  namesFile: document.getElementById("namesFile"),
+  namesFileStatus: document.getElementById("namesFileStatus"),
   correctionsFile: document.getElementById("correctionsFile"),
   resultsStatus: document.getElementById("resultsStatus"),
   correctionsStatus: document.getElementById("correctionsStatus"),
@@ -42,6 +45,39 @@ const elements = {
   pageTemplate: document.getElementById("pageTemplate"),
   importMessage: document.getElementById("importMessage"),
 };
+
+function setNamesForPrinting(names, sourceLabel) {
+  elements.names.value = names.join("\n");
+  const records = names.map((printName) => ({ printName, correctionApplied: false, sourceName: printName }));
+  renderNamesTable(records, sourceLabel);
+  elements.downloadCsvButton.disabled = false;
+  elements.downloadXlsxButton.disabled = false;
+  elements.printButton.disabled = false;
+  elements.importMessage.textContent = `${names.length} certificate names are ready for bulk printing.`;
+  elements.importMessage.dataset.tone = "success";
+  elements.summary.replaceChildren();
+  [["Names imported", names.length], ["A4 print pages", names.length]].forEach(([label, value]) => {
+    const card = document.createElement("div");
+    card.className = "summary-card";
+    const number = document.createElement("strong");
+    number.textContent = String(value);
+    const caption = document.createElement("span");
+    caption.textContent = label;
+    card.append(number, caption);
+    elements.summary.appendChild(card);
+  });
+  elements.issues.replaceChildren();
+  renderPages();
+}
+
+async function importNamesFile(file) {
+  setStatus(elements.namesFileStatus, "Reading names file…", "working");
+  const workbook = await readSpreadsheet(file);
+  const { parsed } = findNamesSheet(workbook);
+  setNamesForPrinting(parsed.names, "Imported names file");
+  const skipped = parsed.skippedRows.length ? `; ${parsed.skippedRows.length} invalid rows skipped` : "";
+  setStatus(elements.namesFileStatus, `${file.name}: ${parsed.names.length} names${skipped}`, "success");
+}
 
 function setStatus(target, message, tone = "neutral") {
   target.textContent = message;
@@ -140,7 +176,7 @@ function renderSummary(reconciliation) {
   });
 }
 
-function renderNamesTable(names) {
+function renderNamesTable(names, directSource = "") {
   elements.namesTableBody.replaceChildren();
   names.forEach((record, index) => {
     const row = document.createElement("tr");
@@ -149,13 +185,22 @@ function renderNamesTable(names) {
     const name = document.createElement("td");
     name.textContent = record.printName;
     const source = document.createElement("td");
-    source.textContent = record.correctionApplied
+    source.textContent = directSource || (record.correctionApplied
       ? `Updated from ${record.sourceName} (${record.matchMethod} match)`
-      : "Original PASS name";
+      : "Original PASS name");
     row.append(position, name, source);
     elements.namesTableBody.appendChild(row);
   });
 }
+
+elements.namesFile.addEventListener("change", async (event) => {
+  try {
+    await importNamesFile(event.target.files?.[0]);
+  } catch (error) {
+    setStatus(elements.namesFileStatus, error.message, "danger");
+    showError(error);
+  }
+});
 
 function processImportedFiles() {
   if (!state.results) {

@@ -1,16 +1,17 @@
 # OIT Certificate Bulk Printer
 
-A static, privacy-preserving A4 certificate printer. It imports the Certificate results workbook and the submitted correction list in the browser, keeps only explicit `PASS` rows, applies exact email matches with exact normalized-name fallback, and prints one certificate per name.
+A static, privacy-preserving A4 certificate printer. Its main workflow imports a names-only CSV/XLSX and prints one certificate per name. An optional source-matching workflow can also import the Certificate results workbook and submitted correction list, keep only explicit `PASS` rows, and apply exact corrections.
 
 No spreadsheet data is uploaded or stored by the site.
 
 ## Use
 
-1. Choose the results Excel workbook.
-2. Choose the corrections CSV or Excel file.
-3. Select **Match PASS names**, review the list, and optionally download a names-only CSV/XLSX.
-4. Choose **Names only** for pre-printed certificates or **Complete certificate design** for blank A4 paper.
-5. Print at A4 portrait, actual size / 100%, one-sided, with browser headers and footers disabled.
+1. Choose a names-only CSV or Excel file with a `Student Name`, `Full Name`, `Certificate Name`, `Print Name`, or `Name` column. A headerless first column also works.
+2. Review the imported list; one A4 preview is created per valid name.
+3. Choose **Names only** for pre-printed certificates or **Complete certificate design** for blank A4 paper.
+4. Print at A4 portrait, actual size / 100%, one-sided, with browser headers and footers disabled.
+
+Open the optional source-matching panel if you need to rebuild the PASS list from results and correction files.
 
 ## Matching safety
 

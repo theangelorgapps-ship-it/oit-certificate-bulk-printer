@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
+    "test:names-import": "node --test tests/names-import.test.mjs && echo 'NAMES_FILE_IMPORT: PASS'",
     "test:oit-bulk": "node --test tests/*.test.mjs && node scripts/verify-source-data.mjs",
     "test:oit-print": "node scripts/print-qa.mjs"
   },
