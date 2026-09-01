@@ -84,6 +84,9 @@ td:first-child{width:3rem;color:var(--muted)}td:nth-child(2){font-weight:650}tr:
 .print-card{padding:2rem 1.8rem}
 .control-stack{display:grid;gap:.9rem}
 .control-stack select,.control-stack input{margin-top:.38rem;padding:.78rem .86rem}
+.print-status{margin:0;padding:.85rem .95rem;border:1px solid var(--hair);border-radius:1rem;background:var(--chip);color:var(--muted);font-size:1rem}
+.print-status[data-tone="working"]{border-color:#aed7f2;background:#edf8ff;color:#075f9e}
+.print-status[data-tone="success"]{border-color:#bce6ca;background:#effbf3;color:var(--success)}
 .offset-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
 .print-actions{margin-top:.15rem}.print-actions .primary,.source-card .primary{border-color:var(--ink);background:var(--ink);color:#fff}
 .print-actions .primary:hover,.source-card .primary:hover{background:#2d3034}
@@ -107,4 +110,4 @@ td:first-child{width:3rem;color:var(--muted)}td:nth-child(2){font-weight:650}tr:
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.nav-key>span,.source-card summary>span{transition:none}}
 @media(prefers-reduced-transparency:reduce){.upload,.rail,.topbar{backdrop-filter:none;-webkit-backdrop-filter:none}}
 @page{size:A4 portrait;margin:0}
-@media print{html,body{margin:0;padding:0;background:#fff}.no-print{display:none}.pages{display:block;padding:0;background:#fff}.certificate-page{width:210mm;height:297mm;max-width:none;aspect-ratio:auto;box-shadow:none;break-after:page;page-break-after:always}.certificate-page:last-child{break-after:auto;page-break-after:auto}.mode-chip{display:none}body.overlay-only .certificate-art{visibility:hidden}}
+@media print{html,body{margin:0;padding:0;background:#fff}.no-print{display:none}.pages{display:block;padding:0;background:#fff}.certificate-page{width:210mm;height:297mm;max-width:none;aspect-ratio:auto;box-shadow:none;break-after:page;page-break-after:always}.certificate-page:last-child{break-after:auto;page-break-after:auto}body.paced-printing .certificate-page{display:none}body.paced-printing .certificate-page.is-print-target{display:block;break-after:auto;page-break-after:auto}.mode-chip{display:none}body.overlay-only .certificate-art{visibility:hidden}}

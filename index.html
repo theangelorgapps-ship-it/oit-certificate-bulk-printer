@@ -80,10 +80,12 @@
           <div class="section-heading"><div><p class="card-kicker">A4 output</p><h2 id="print-title">Set up certificate printing</h2><p>Choose the paper workflow and adjust the name position only after a one-sheet test.</p></div></div>
           <div class="control-stack">
             <label>Print mode<select id="printMode"><option value="overlay">Names only for pre-printed certificates</option><option value="complete">Complete certificate design on blank paper</option></select></label>
+            <label>Printer pacing<select id="printPacing"><option value="5000">5-second gap: one certificate per print job</option><option value="batch">Standard batch: all certificates in one print job</option></select></label>
+            <p id="printStatus" class="print-status" role="status" aria-live="polite">Paced mode opens one browser print dialog per certificate. Confirm each job; the next dialog opens after a 5-second pause.</p>
             <div class="offset-grid"><label>Move left or right (mm)<input id="offsetX" type="number" value="0" step="0.5"></label><label>Move up or down (mm)<input id="offsetY" type="number" value="0" step="0.5"></label></div>
-            <div class="print-actions"><button id="resetButton">Reset position</button><button id="printButton" class="primary" disabled>Print certificates <span aria-hidden="true">→</span></button></div>
+            <div class="print-actions"><button id="resetButton">Reset position</button><button id="cancelPrintButton" hidden>Stop print queue</button><button id="printButton" class="primary" disabled>Print certificates <span aria-hidden="true">→</span></button></div>
           </div>
-          <div class="printer-note"><strong>HP LaserJet settings</strong><span>A4, portrait, actual size or 100%, one-sided, headers and footers off.</span></div>
+          <div class="printer-note"><strong>HP LaserJet Pro MFP M428fdw settings</strong><span>Use Tray 1 with laser-compatible 160-200 gsm card. Choose A4, portrait, actual size or 100%, Heavy/Cardstock, one-sided, and headers and footers off. Do not use 230 gsm: HP rates Tray 1 only up to 200 gsm.</span></div>
         </section>
 
         <details class="card source-card">

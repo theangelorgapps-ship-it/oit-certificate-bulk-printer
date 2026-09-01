@@ -19,6 +19,7 @@ const state = {
   results: null,
   corrections: null,
   reconciliation: null,
+  printQueue: null,
 };
 
 const elements = {
@@ -31,9 +32,12 @@ const elements = {
   processButton: document.getElementById("processButton"),
   names: document.getElementById("names"),
   printMode: document.getElementById("printMode"),
+  printPacing: document.getElementById("printPacing"),
+  printStatus: document.getElementById("printStatus"),
   offsetX: document.getElementById("offsetX"),
   offsetY: document.getElementById("offsetY"),
   printButton: document.getElementById("printButton"),
+  cancelPrintButton: document.getElementById("cancelPrintButton"),
   resetButton: document.getElementById("resetButton"),
   downloadCsvButton: document.getElementById("downloadCsvButton"),
   downloadXlsxButton: document.getElementById("downloadXlsxButton"),
@@ -227,6 +231,13 @@ function normalizedNames() {
     .filter(Boolean);
 }
 
+function syncNameActions() {
+  const hasNames = normalizedNames().length > 0;
+  elements.downloadCsvButton.disabled = !hasNames;
+  elements.downloadXlsxButton.disabled = !hasNames;
+  elements.printButton.disabled = !hasNames || Boolean(state.printQueue);
+}
+
 function measureName(name, size = REFERENCE_SIZE) {
   const canvas = measureName.canvas || (measureName.canvas = document.createElement("canvas"));
   const context = canvas.getContext("2d");
@@ -290,6 +301,76 @@ function renderPages() {
     elements.pages.appendChild(fragment);
   });
   elements.pageCount.textContent = `${names.length} ${names.length === 1 ? "page" : "pages"}`;
+  applyPacedPrintTarget();
+}
+
+function setPrintStatus(message, tone = "neutral") {
+  elements.printStatus.textContent = message;
+  elements.printStatus.dataset.tone = tone;
+}
+
+function applyPacedPrintTarget() {
+  const targetIndex = state.printQueue?.index;
+  elements.pages.querySelectorAll(".certificate-page").forEach((page, index) => {
+    page.classList.toggle("is-print-target", index === targetIndex);
+  });
+}
+
+function setPrintQueueControls(active) {
+  elements.namesFile.disabled = active;
+  elements.resultsFile.disabled = active;
+  elements.correctionsFile.disabled = active;
+  elements.processButton.disabled = active;
+  elements.names.disabled = active;
+  elements.printMode.disabled = active;
+  elements.printPacing.disabled = active;
+  elements.offsetX.disabled = active;
+  elements.offsetY.disabled = active;
+  elements.resetButton.disabled = active;
+  elements.cancelPrintButton.hidden = !active;
+  syncNameActions();
+}
+
+function finishPacedPrinting(message, tone = "success") {
+  if (state.printQueue?.timer) clearTimeout(state.printQueue.timer);
+  state.printQueue = null;
+  document.body.classList.remove("paced-printing");
+  elements.pages.querySelectorAll(".certificate-page").forEach((page) => page.classList.remove("is-print-target"));
+  setPrintQueueControls(false);
+  setPrintStatus(message, tone);
+}
+
+function scheduleNextCertificate() {
+  const queue = state.printQueue;
+  if (!queue) return;
+  const seconds = Math.round(queue.delayMs / 1000);
+  setPrintStatus(`Certificate ${queue.index} of ${queue.total} submitted. Waiting ${seconds} seconds before certificate ${queue.index + 1}.`, "working");
+  queue.timer = setTimeout(printPacedCertificate, queue.delayMs);
+}
+
+function printPacedCertificate() {
+  const queue = state.printQueue;
+  if (!queue) return;
+  applyPacedPrintTarget();
+  setPrintStatus(`Certificate ${queue.index + 1} of ${queue.total}: confirm this one-page job in the browser print dialog.`, "working");
+  window.print();
+  if (state.printQueue !== queue) return;
+  queue.index += 1;
+  if (queue.index >= queue.total) {
+    finishPacedPrinting(`All ${queue.total} certificate print dialogs have been completed.`);
+    return;
+  }
+  scheduleNextCertificate();
+}
+
+function startPacedPrinting(delayMs) {
+  const total = normalizedNames().length;
+  if (!total || state.printQueue) return;
+  state.printQueue = { index: 0, total, delayMs, timer: null };
+  document.body.classList.add("paced-printing");
+  setPrintQueueControls(true);
+  renderPages();
+  printPacedCertificate();
 }
 
 function downloadBlob(blob, filename) {
@@ -354,16 +435,33 @@ elements.processButton.addEventListener("click", () => {
   }
 });
 
-elements.names.addEventListener("input", renderPages);
+elements.names.addEventListener("input", () => {
+  syncNameActions();
+  renderPages();
+});
 [elements.printMode, elements.offsetX, elements.offsetY].forEach((control) => {
   control.addEventListener("input", renderPages);
   control.addEventListener("change", renderPages);
+});
+elements.printPacing.addEventListener("change", () => {
+  setPrintStatus(elements.printPacing.value === "batch"
+    ? "Standard batch mode sends every certificate in one browser print job."
+    : "Paced mode opens one browser print dialog per certificate. Confirm each job; the next dialog opens after a 5-second pause.");
 });
 elements.downloadCsvButton.addEventListener("click", downloadCsv);
 elements.downloadXlsxButton.addEventListener("click", downloadXlsx);
 elements.printButton.addEventListener("click", () => {
   renderPages();
-  window.print();
+  if (elements.printPacing.value === "batch") {
+    setPrintStatus(`Sending ${normalizedNames().length} certificates as one print job.`, "working");
+    window.print();
+    setPrintStatus("The batch print dialog has been completed.", "success");
+    return;
+  }
+  startPacedPrinting(Number(elements.printPacing.value));
+});
+elements.cancelPrintButton.addEventListener("click", () => {
+  finishPacedPrinting("Paced print queue stopped. Certificates already confirmed remain in the printer queue.", "neutral");
 });
 elements.resetButton.addEventListener("click", () => {
   elements.offsetX.value = "0";
@@ -374,4 +472,5 @@ window.addEventListener("beforeprint", renderPages);
 
 await document.fonts.load('66px "OIT Award Script"');
 await document.fonts.ready;
+syncNameActions();
 renderPages();
