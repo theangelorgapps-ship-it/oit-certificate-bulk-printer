@@ -27,6 +27,8 @@ try {
   assert.equal(await page.locator(".certificate-page").count(), 0, "The empty workspace should not create print pages.");
   assert.equal(await page.locator("#pageCount").textContent(), "0 pages");
   assert.equal(await page.locator("#printButton").isDisabled(), true);
+  assert.equal(await page.locator("#printPacing").inputValue(), "5000", "Five-second pacing should be the default.");
+  assert.match(await page.locator("#printStatus").textContent(), /5-second pause/);
 
   await page.locator("#names").fill("Test Student");
   assert.equal(await page.locator("#pageCount").textContent(), "1 page");
@@ -63,12 +65,21 @@ try {
   assert.equal(await page.locator("body").evaluate((body) => body.classList.contains("paced-printing")), false);
 
   await page.locator("#printPacing").evaluate((select) => {
-    select.querySelector('option[value="25"]').value = "1000";
-    select.value = "1000";
+    select.querySelector('option[value="25"]').value = "10000";
+    select.value = "10000";
   });
   await page.evaluate(() => { window.__printCalls = 0; });
   await page.click("#printButton");
   assert.equal(await page.evaluate(() => window.__printCalls), 1);
+  for (const selector of ["#namesFile", "#resultsFile", "#correctionsFile", "#processButton", "#names", "#printMode", "#printPacing", "#offsetX", "#offsetY", "#resetButton", "#printButton"]) {
+    assert.equal(await page.locator(selector).isDisabled(), true, `${selector} should be locked while paced printing is active.`);
+  }
+  await page.locator("#printButton").evaluate((button) => button.click());
+  assert.equal(await page.evaluate(() => window.__printCalls), 1, "A second queue must not start while printing is active.");
+  await page.emulateMedia({ media: "print" });
+  assert.equal(await page.locator(".certificate-page:visible").count(), 1, "Print media should expose exactly one paced certificate.");
+  assert.equal(await page.locator(".certificate-page:visible .name-layer text").allTextContents().then((parts) => parts.join(" ")), "Paced One");
+  await page.emulateMedia({ media: "screen" });
   await page.click("#cancelPrintButton");
   await page.waitForTimeout(50);
   assert.equal(await page.evaluate(() => window.__printCalls), 1, "Stopping the queue should cancel the pending certificate job.");
