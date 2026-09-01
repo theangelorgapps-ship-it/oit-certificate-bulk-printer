@@ -27,7 +27,69 @@ try {
   assert.equal(await page.locator(".certificate-page").count(), 0, "The empty workspace should not create print pages.");
   assert.equal(await page.locator("#pageCount").textContent(), "0 pages");
   assert.equal(await page.locator("#printButton").isDisabled(), true);
+  assert.equal(await page.locator("#printPacing").inputValue(), "5000", "Five-second pacing should be the default.");
+  assert.match(await page.locator("#printStatus").textContent(), /5-second pause/);
 
+  await page.locator("#names").fill("Test Student");
+  assert.equal(await page.locator("#pageCount").textContent(), "1 page");
+  assert.equal(await page.locator("#printButton").isEnabled(), true, "Typed names should be printable without a file import.");
+  await page.evaluate(() => {
+    window.__printCalls = 0;
+    window.print = () => { window.__printCalls += 1; };
+  });
+  await page.click("#printButton");
+  assert.equal(await page.evaluate(() => window.__printCalls), 1, "The enabled print button should open browser printing.");
+  assert.match(await page.locator("#printStatus").textContent(), /All 1 certificate print dialogs/);
+  await page.locator("#names").fill("");
+  assert.equal(await page.locator("#printButton").isDisabled(), true, "Clearing all names should disable printing.");
+
+  await page.locator("#names").fill("Paced One\nPaced Two");
+  await page.locator("#printPacing").evaluate((select) => {
+    select.add(new Option("Test pacing", "25"));
+    select.value = "25";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.evaluate(() => {
+    window.__printCalls = 0;
+    window.__printedTargets = [];
+    window.print = () => {
+      window.__printCalls += 1;
+      window.__printedTargets.push([...document.querySelectorAll(".certificate-page.is-print-target")]
+        .map((certificate) => [...certificate.querySelectorAll(".name-layer text")].map((text) => text.textContent).join(" ")));
+    };
+  });
+  await page.click("#printButton");
+  await page.waitForFunction(() => window.__printCalls === 2);
+  assert.deepEqual(await page.evaluate(() => window.__printedTargets), [["Paced One"], ["Paced Two"]], "Paced mode should expose one certificate per print job in order.");
+  assert.match(await page.locator("#printStatus").textContent(), /All 2 certificate print dialogs/);
+  assert.equal(await page.locator("body").evaluate((body) => body.classList.contains("paced-printing")), false);
+
+  await page.locator("#printPacing").evaluate((select) => {
+    select.querySelector('option[value="25"]').value = "10000";
+    select.value = "10000";
+  });
+  await page.evaluate(() => { window.__printCalls = 0; });
+  await page.click("#printButton");
+  assert.equal(await page.evaluate(() => window.__printCalls), 1);
+  for (const selector of ["#namesFile", "#resultsFile", "#correctionsFile", "#processButton", "#names", "#printMode", "#printPacing", "#offsetX", "#offsetY", "#resetButton", "#printButton"]) {
+    assert.equal(await page.locator(selector).isDisabled(), true, `${selector} should be locked while paced printing is active.`);
+  }
+  await page.locator("#printButton").evaluate((button) => button.click());
+  assert.equal(await page.evaluate(() => window.__printCalls), 1, "A second queue must not start while printing is active.");
+  await page.emulateMedia({ media: "print" });
+  assert.equal(await page.locator(".certificate-page:visible").count(), 1, "Print media should expose exactly one paced certificate.");
+  assert.equal(await page.locator(".certificate-page:visible .name-layer text").allTextContents().then((parts) => parts.join(" ")), "Paced One");
+  await page.emulateMedia({ media: "screen" });
+  await page.click("#cancelPrintButton");
+  await page.waitForTimeout(50);
+  assert.equal(await page.evaluate(() => window.__printCalls), 1, "Stopping the queue should cancel the pending certificate job.");
+  assert.match(await page.locator("#printStatus").textContent(), /print queue stopped/i);
+  assert.equal(await page.locator("#printButton").isEnabled(), true, "Stopping the queue should restore printing controls.");
+  await page.locator("#names").fill("");
+
+  if (process.env.OIT_PRINT_SMOKE_ONLY === "1") {
+    console.log("PRINT_BUTTON_QA: PASS");
+  } else {
   await page.setInputFiles("#namesFile", {
     name: "invalid-contacts.csv",
     mimeType: "text/csv",
@@ -73,6 +135,7 @@ try {
     window.__printCalls = 0;
     window.print = () => { window.__printCalls += 1; };
   });
+  await page.locator("#printPacing").selectOption("batch");
   await page.click("#printButton");
   assert.equal(await page.evaluate(() => window.__printCalls), 1);
 
@@ -90,6 +153,7 @@ try {
   console.log("NAMES_FILE_CSV_PAGES=48");
   console.log("NAMES_FILE_XLSX_PAGES=48");
   console.log("PRINT_QA: PASS");
+  }
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
